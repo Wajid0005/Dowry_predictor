@@ -1,42 +1,42 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import joblib
-import time
 
-# -------------------- CONFIG --------------------
+# ================= CONFIG =================
 st.set_page_config(
     page_title="Dahej Predictor",
     layout="centered",
     initial_sidebar_state="collapsed"
 )
 
-# -------------------- LOAD MODEL --------------------
-model = joblib.load("model.pkl")
+# ================= LOAD MODEL =================
+@st.cache_resource
+def load_model():
+    return joblib.load("model.pkl")
 
-# -------------------- SESSION STATE --------------------
+model = load_model()
+
+# ================= SESSION STATE =================
 if "step" not in st.session_state:
     st.session_state.step = 0
 
 if "responses" not in st.session_state:
     st.session_state.responses = {}
 
-# -------------------- HELPERS --------------------
 TOTAL_STEPS = 16
 
+# ================= HELPERS =================
 def progress_ui():
     st.progress(st.session_state.step / TOTAL_STEPS)
     st.caption(f"Step {st.session_state.step} / {TOTAL_STEPS}")
 
 def next_step():
     st.session_state.step += 1
-    time.sleep(0.3)
     st.rerun()
 
 def prev_step():
-    if st.session_state.step > 0:
-        st.session_state.step -= 1
-        st.rerun()
+    st.session_state.step = max(0, st.session_state.step - 1)
+    st.rerun()
 
 def card(title):
     st.markdown(
@@ -44,8 +44,8 @@ def card(title):
         <div style="
             background:#ffffff;
             padding:30px;
-            border-radius:12px;
-            box-shadow:0 8px 24px rgba(0,0,0,0.1);
+            border-radius:14px;
+            box-shadow:0 10px 30px rgba(0,0,0,0.12);
             margin-top:30px;
         ">
         <h3>{title}</h3>
@@ -54,17 +54,17 @@ def card(title):
         unsafe_allow_html=True
     )
 
-# -------------------- SIDEBAR NAV --------------------
+# ================= SIDEBAR =================
 st.sidebar.title("Menu")
 page = st.sidebar.radio(
     "",
     ["Main Predictor", "Data", "Actions", "About"]
 )
 
-# ==================== MAIN PREDICTOR ====================
+# ================= MAIN PREDICTOR =================
 if page == "Main Predictor":
 
-    # ---------- STEP 0 : WELCOME ----------
+    # ---------- STEP 0 ----------
     if st.session_state.step == 0:
         card("Welcome to Dahej Predictor")
 
@@ -72,11 +72,12 @@ if page == "Main Predictor":
         st.session_state.responses["email"] = st.text_input("Email (optional)")
 
         col1, col2 = st.columns(2)
-        if col1.button("♂ Male"):
+
+        if col1.button("♂ Male", key="male"):
             st.session_state.responses["gender"] = "Male"
             next_step()
 
-        if col2.button("♀ Female"):
+        if col2.button("♀ Female", key="female"):
             st.session_state.responses["gender"] = "Female"
             st.session_state.step = 99
             st.rerun()
@@ -87,10 +88,9 @@ if page == "Main Predictor":
     elif st.session_state.step == 99:
         card("Message")
 
-        st.markdown("### 🎥 [ Video Placeholder ]")
         st.info(
-            "This project does not apply here.\n\n"
-            "Dahej is a social problem rooted in patriarchy."
+            "This project highlights social bias.\n\n"
+            "Dahej is a harmful practice."
         )
 
         if st.button("Exit"):
@@ -100,15 +100,16 @@ if page == "Main Predictor":
 
     # ---------- STEP 1 : OCCUPATION ----------
     elif st.session_state.step == 1:
-        card(f"Okay {st.session_state.responses.get('name','')}, choose your occupation")
+        card("Choose your occupation")
 
-        opts = [
-            "Private Job", "Government Job", "Business",
-            "Freelancer", "Self-employed", "Unemployed"
+        options = [
+            "Private Job", "Government Job",
+            "Business", "Freelancer",
+            "Self-employed", "Unemployed"
         ]
 
-        for opt in opts:
-            if st.button(opt):
+        for opt in options:
+            if st.button(opt, key=f"occ_{opt}"):
                 st.session_state.responses["Occupation"] = opt
                 next_step()
 
@@ -119,12 +120,9 @@ if page == "Main Predictor":
 
     # ---------- STEP 2 : INCOME ----------
     elif st.session_state.step == 2:
-        card("Select your yearly income (INR)")
+        card("Yearly In-Hand Income (INR)")
 
-        income = st.slider(
-            "Income",
-            0, 10_00_00_000, step=50_000
-        )
+        income = st.slider("Income", 0, 10_00_00_000, step=50_000)
         st.session_state.responses["Yearly_Inhand_Income_INR"] = income
 
         if st.button("Next ➡"):
@@ -137,11 +135,9 @@ if page == "Main Predictor":
 
     # ---------- STEP 3 : AGE ----------
     elif st.session_state.step == 3:
-        card("Enter your age")
+        card("Your Age")
 
-        age = st.number_input(
-            "Age", min_value=18, max_value=45
-        )
+        age = st.number_input("Age", min_value=18, max_value=45)
         st.session_state.responses["Age"] = age
 
         if st.button("Next ➡"):
@@ -152,17 +148,18 @@ if page == "Main Predictor":
 
         progress_ui()
 
-    # ---------- STEP 4 : POLITICAL ----------
+    # ---------- STEP 4 : POLITICAL VIEW ----------
     elif st.session_state.step == 4:
-        card("National Stress Preference 😄")
+        card("Political Vibe 😄")
 
         col1, col2 = st.columns(2)
-        if col1.button("Modi"):
-            st.session_state.responses["Is_Pookie"] = 1
+
+        if col1.button("Modi", key="modi"):
+            st.session_state.responses["Political_view"] = 1
             next_step()
 
-        if col2.button("Rahul"):
-            st.session_state.responses["Is_Pookie"] = 0
+        if col2.button("Rahul", key="rahul"):
+            st.session_state.responses["Political_view"] = 0
             next_step()
 
         if st.button("⬅ Back"):
@@ -190,14 +187,14 @@ if page == "Main Predictor":
     elif st.session_state.step == 6:
         card("Education Level")
 
-        edu = [
-            "No Formal Education", "10th Pass", "12th Pass",
-            "Graduate", "Postgraduate+"
+        levels = [
+            "No Formal Education", "10th Pass",
+            "12th Pass", "Graduate", "Postgraduate+"
         ]
 
-        for e in edu:
-            if st.button(e):
-                st.session_state.responses["Education_Level"] = e
+        for lvl in levels:
+            if st.button(lvl, key=f"edu_{lvl}"):
+                st.session_state.responses["Education_Level"] = lvl
                 next_step()
 
         if st.button("⬅ Back"):
@@ -223,11 +220,12 @@ if page == "Main Predictor":
 
     # ---------- STEP 8 : LAND DISPUTE ----------
     elif st.session_state.step == 8:
-        card("Any legal dispute on land?")
+        card("Any land dispute?")
 
         if st.button("No Dispute"):
             st.session_state.responses["Land_Legal_Dispute"] = 0
             next_step()
+
         if st.button("Chacha–Mama Case 😬"):
             st.session_state.responses["Land_Legal_Dispute"] = 1
             next_step()
@@ -242,7 +240,7 @@ if page == "Main Predictor":
         card("Savings (in Lakhs)")
 
         sav = st.slider("Savings", 0, 10_000, step=10)
-        st.session_state.responses["Savings_in_Lakhs"] = sav
+        st.session_state.responses["Saving"] = sav
 
         if st.button("Next ➡"):
             next_step()
@@ -256,9 +254,8 @@ if page == "Main Predictor":
     elif st.session_state.step == 10:
         card("Family Structure")
 
-        fam = ["Joint", "Nuclear", "Living Alone"]
-        for f in fam:
-            if st.button(f):
+        for f in ["Joint", "Nuclear", "Living Alone"]:
+            if st.button(f, key=f"fam_{f}"):
                 st.session_state.responses["Family_Structure"] = f
                 next_step()
 
@@ -289,6 +286,7 @@ if page == "Main Predictor":
         if st.button("Chill"):
             st.session_state.responses["Personality_Type"] = "Chill"
             next_step()
+
         if st.button("Ambi"):
             st.session_state.responses["Personality_Type"] = "Ambi"
             next_step()
@@ -302,9 +300,8 @@ if page == "Main Predictor":
     elif st.session_state.step == 13:
         card("Gym Category")
 
-        gym = ["Passionate", "Optional", "Obese"]
-        for g in gym:
-            if st.button(g):
+        for g in ["Passionate", "Optional", "Obese"]:
+            if st.button(g, key=f"gym_{g}"):
                 st.session_state.responses["Gym_Category"] = g
                 next_step()
 
@@ -313,13 +310,14 @@ if page == "Main Predictor":
 
         progress_ui()
 
-    # ---------- STEP 14 : RURAL / URBAN ----------
+    # ---------- STEP 14 : BACKGROUND ----------
     elif st.session_state.step == 14:
         card("Background")
 
         if st.button("Gao ka chhora"):
             st.session_state.responses["Rural_or_Urban_Background"] = "Rural"
             next_step()
+
         if st.button("Sheher ka launda"):
             st.session_state.responses["Rural_or_Urban_Background"] = "Urban"
             next_step()
@@ -333,13 +331,17 @@ if page == "Main Predictor":
     elif st.session_state.step == 15:
         card("Prediction")
 
-        st.markdown("### 🎥 [ Prediction Video Placeholder ]")
+        EXPECTED_COLS = [
+            "Occupation", "Family_Structure", "Gym_Category",
+            "Personality_Type", "Rural_or_Urban_Background",
+            "Education_Level", "Owns_House", "Political_view",
+            "Number_of_Vehicles_Owned", "Owns_Land",
+            "Land_Legal_Dispute", "Age",
+            "Yearly_Inhand_Income_INR", "Saving"
+        ]
 
-        df = pd.DataFrame([{
-            **st.session_state.responses,
-            "Owns_House": st.session_state.responses.get("Owns_House",0),
-            "Owns_Land": st.session_state.responses.get("Owns_Land",0)
-        }])
+        row = {c: st.session_state.responses.get(c, 0) for c in EXPECTED_COLS}
+        df = pd.DataFrame([row])
 
         pred = model.predict(df)[0]
 
@@ -352,40 +354,17 @@ if page == "Main Predictor":
             st.rerun()
 
         if col2.button("🔗 Share"):
-            st.info("Sharing feature placeholder")
+            st.info("Sharing coming soon")
 
-# ==================== DATA PAGE ====================
+# ================= OTHER PAGES =================
 elif page == "Data":
-    st.title("Data Overview")
+    st.title("Data")
+    st.info("Dataset exploration coming soon.")
 
-    st.subheader("Raw Data Sample")
-    st.dataframe(pd.read_csv("data/raw_sample.csv").head(10))
-
-    st.subheader("Cleaned Data Sample")
-    st.dataframe(pd.read_csv("data/clean_sample.csv").head(10))
-
-# ==================== ACTIONS PAGE ====================
 elif page == "Actions":
-    st.title("Actions Performed")
+    st.title("Actions")
+    st.code("Model training & cleaning shown here.", language="python")
 
-    st.code(
-        """
-        # Example
-        df.dropna()
-        df['Income'] = df['Income'].clip(0, 1e7)
-        model = RandomForestClassifier()
-        """,
-        language="python"
-    )
-
-    st.markdown("[Open Colab Notebook](https://colab.research.google.com/)")
-
-# ==================== ABOUT PAGE ====================
 elif page == "About":
-    st.title("About Me")
-
-    st.markdown("### 🎥 [ About Video Placeholder ]")
-    st.write(
-        "This project explores how social biases "
-        "can be modeled and questioned using data."
-    )
+    st.title("About")
+    st.write("Educational project exploring bias with humor.")
