@@ -1,5 +1,10 @@
 import streamlit as st
 import pandas as pd
+from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.ensemble import RandomForestClassifier
+
 import joblib
 
 # ================= CONFIG =================
